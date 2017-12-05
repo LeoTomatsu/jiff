@@ -1,0 +1,70 @@
+first_configuration: (172.20.211.81)
+- honest_1.0:
+	Source: 10.0.0.0
+	Port: 1000
+	Destination: 172.20.211.81
+	Port: 7000
+	Speed: 1000
+	Size: 1000
+- honest_2.0:
+	Source: 10.0.0.1
+	Port: 1000
+	Destination: 172.20.211.81
+	Port: 7000
+	Speed: 1000
+	Size: 1000
+- Malicious_X:
+	Source: 190.0.0.0
+	Port: 200
+	Destination: 172.20.211.81
+	Port: 7000
+	Speed: 500
+	Size: 200
+
+
+second configuration: (192.168.56.1)
+- honest_1.0:
+	Source: 10.0.0.0
+	Port: 1000
+	Destination: 192.168.56.1
+	Port: 7000
+	Speed: 1000
+	Size: 1000
+- honest_2.0:
+	Source: 10.0.0.1
+	Port: 1000
+	Destination: 192.168.56.1
+	Port: 7000
+	Speed: 1000
+	Size: 1000
+- Malicious_X:
+	Source: 190.0.0.0
+	Port: 200
+	Destination: 192.168.56.1
+	Port: 7000
+	Speed: 650
+	Size: 200
+
+
+third configuration: (10.0.0.227)
+- honest_1.0:
+	Source: 10.0.0.0
+	Port: 1000
+	Destination: 10.0.0.227
+	Port: 7000
+	Speed: 1000
+	Size: 1000
+- honest_2.0:
+	Source: 10.0.0.1
+	Port: 1000
+	Destination: 10.0.0.227
+	Port: 7000
+	Speed: 1000
+	Size: 1000
+- Malicious_X:
+	Source: 190.0.0.0
+	Port: 200
+	Destination: 10.0.0.227
+	Port: 7000
+	Speed: 100
+	Size: 200
