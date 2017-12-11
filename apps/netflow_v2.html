@@ -1,0 +1,222 @@
+<html>
+  <head>
+    <title>JIFF and Netflow Analyzer v2</title>
+
+    <style>
+      .error {
+        color: #FF0000;
+      }
+    </style>
+
+    <!-- jiff and required libraries -->
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/lib/cryptico.min.js"></script>
+    <script src="/lib/jiff-client.js"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+
+    <script type="text/javascript">
+      var jiff_instance;
+      var test = [];
+      var ratio=0;
+      var party_count;
+      var ip = {};
+      var sortable = [];
+      var address = [];
+      var frequency = [];
+      var max_count=3;
+
+      var globalIP = {
+        "190.0.0.0:200": 1,
+        "10.0.0.1:1000": 2,
+        "10.0.0.2:1000": 3
+      };
+
+      var globalINT = {
+        "1": "190.0.0.0:200",
+        "2": "10.0.0.1:1000",
+        "3": "10.0.0.2:1000"
+      };
+
+      function connect() {
+        $('#connectButton').prop('disabled', true);
+        var computation_id = $('#computation_id').val();
+        party_count = parseInt($('#count').val());
+
+        if(isNaN(party_count)) {
+          $("#output").append("<p class='error'>Party count must be a valid number!</p>");
+          $('#connectButton').prop('disabled', false);
+        }
+
+        else {
+          var options = { party_count: party_count};
+          options.onError = function(error) { $("#output").append("<p class='error'>"+error+"</p>"); };
+          options.onConnect = function() { $("#output").append("<p>All parties Connected!</p>"); $("#shareButton").attr("disabled", false); };
+
+          var hostname = window.location.hostname.trim();
+          var port = window.location.port;
+          if(port == null || port == '')
+            port = "80";
+          if(!(hostname.startsWith("http://") || hostname.startsWith("https://")))
+            hostname = "http://" + hostname;
+          if(hostname.endsWith("/"))
+            hostname = hostname.substring(0, hostname.length-1);
+          if(hostname.indexOf(":") > -1)
+            hostanme = hostname.substring(0, hostname.indexOf(":"));
+
+          hostname = hostname + ":" + port;
+          jiff_instance = jiff.make_jiff(hostname, computation_id, options);
+        }
+      }
+
+      document.onreadystatechange = function () {
+        if (document.readyState = 'complete') {
+          localquery();
+
+        }
+      }
+
+      function localquery() {
+        document.getElementById('file').onchange = function() {
+          var file = this.files[0];
+          var reader = new FileReader();
+          var count = 0;
+          reader.onload = function(progressEvent) {
+            var lines = this.result.split(/[,\n]/);
+            for (var line = 0; line < lines.length; line++) {
+              var strLine = String(lines[line]);
+              var n = strLine.includes(".");
+              var m = strLine.includes(":");
+
+              if (m & n) {
+                if (count % 2 == 1) {
+                  if (!(strLine in ip)) {
+                    ip[strLine] = 1;
+                  } else {
+                    ip[strLine]++;
+                  }
+                }
+              }
+              count++;
+            }
+
+            for (var vehicle in ip) {
+              sortable.push([vehicle, ip[vehicle]]);
+            }
+
+            sortable.sort(function(a,b) {
+              return b[1] - a[1];
+            });
+
+            var header = ["IP Address", "Frequency"];
+
+            var text = "IP Address, Frequency" + "<br>";
+            for (var z = 0; z < sortable.length; z++) {
+              address.push(sortable[z][0]);
+              frequency.push(ip[sortable[z][0]]);
+            }
+
+            for (var e = 0; e < sortable.length; e++) {
+              test.push(globalIP[address[e]]);
+            }
+            google.charts.load('current', {'packages':['table']});
+            google.charts.setOnLoadCallback(drawTable);
+
+            function drawTable() {
+              var data = new google.visualization.DataTable();
+              data.addColumn('string', 'IP Address');
+              data.addColumn('number', 'Frequency');
+              for (var i = 0; i < address.length; i++) {
+                data.addRows([
+                  [address[i], {v: frequency[i], f: String(frequency[i])}]
+                ]);
+              }
+
+              var table = new google.visualization.Table(document.getElementById('table_div'));
+
+              table.draw(data, {showRowNumber: true, width: '900px', height: '250px'});
+            }
+
+            google.charts.load('current', {'packages':['corechart']});
+            google.charts.setOnLoadCallback(drawChart);
+
+            function drawChart() {
+              var data = new google.visualization.DataTable();
+              data.addColumn('string', 'years');
+              data.addColumn('number', 'sales');
+              for (var t = 0; t < sortable.length; t++) {
+                data.addRow([address[t], frequency[t]]);
+              }
+              var options = {
+                title: "IP Address Frequency"
+              };
+              var chart = new google.visualization.PieChart(document.getElementById('piechart'));
+              chart.draw(data, options);
+            }
+          };
+          reader.readAsText(file);
+        }
+      }
+
+      function share() {
+          MPC(test);
+      }
+
+      function MPC(inputs) {
+        $("#shareButton").attr("disabled", true);
+        $("#output").append("<p>Starting...</p>");
+        var shares = [];
+        for(var i = 0; i < inputs.length; i++) {
+          shares.push(jiff_instance.share(inputs[i]));
+          $("#output").append("<p>Inputs... " + inputs[i] + "</p>");
+        }
+        for(var i = 0; i < shares.length; i++) {
+          var sum = shares[i][1];
+          for(var j = 2; j <= jiff_instance.party_count; j++) {
+            sum = sum.sadd(shares[i][j]);
+          }
+          shares[i] = sum;
+        }
+        jiff_instance.open_all(shares, [1]).then(handleResult, handleError);
+      }
+
+      function handleResult(results) {
+        var num=-1;
+        for(var i = 0; i < results.length; i++) {
+          if(results[i] == null) continue;
+          num = parseInt(results[i]);
+
+          var diff = results[i] - (test[i] * party_count);
+          if (diff == 0) {
+            $("#output").append("<p> Similar Ips... " + globalINT[String(test[i])] +"</p>");
+            ratio++;
+          }
+          if (diff != 0) {
+            $("#output").append("<p> Dissimilar Ips... " + globalINT[String(test[i])] + "</p}");
+          }
+        }
+        var r_ratio = (ratio / max_count) * 100;
+        $("#output").append("<p> Similarity Ratio is... " + r_ratio + "%</p>");
+        $("#shareButton").attr("disabled", false);
+      }
+
+      function handleError() {
+        console.log("Error in open_all");
+      }
+
+    </script>
+  </head>
+
+  <body>
+    <h1> Local NetFlow Analyzer</h1>
+    <input type='file' name='file' id='file'><br>
+    <div id="table_div"></div>
+    <div id="piechart" style="width:900px; height:500px;"></div>
+    <hr>
+    <h1>MPC NetFlow Analyzer</h1>
+    <label for="computation_id">Server ID </label><input id="computation_id" value="test-server1"></input> <br><br>
+    <label for="count">Contributor Count<label> <input id="count" pattern="[0-9]*"> &nbsp; <button id="connectButton" onclick="connect();">Connect</button>
+    <button onclick="share()" id="shareButton" disabled="disabled">Share</button>
+    <div id="output"> </div>
+  </body>
+</html>
