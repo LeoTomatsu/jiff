@@ -2,6 +2,15 @@
 Server and Client side library for performing MPC in JavaScript. Server handles relaying shares between parties.
 Clients and Servers can both participate in the computation and provide input data.
 
+## NetFlow Share
+### Version 1
+   This application is apps/netflow.html. The uses is in case of a DoS attack, it could determine a Malicious IP Address between shared parties while maintaining input privacy. This application extended apps/sum.html.
+   Please use version 1 for simulated data provided in netflow_data. In this data, the Malicious IP is 190.0.0.0:200.
+
+### Version 2
+   This application is apps/netflow_v2.html. The use is in case of a DDoS attack, it could help determine common IP Addresses between shared parties while maintaining input privacy. This application extended apps/vote.html.
+   Please use version 2 for simulated data provided in netflow_data. The Malicious IPs are 10.0.0.1:555, 20.0.0.1:555, 30.0.0.5:555, and 40.0.0.3:555.
+
 ## Requirements
 ### Server:
   Node and npm
